@@ -1,0 +1,128 @@
+
+services:
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "0.0.0.0:81:81"
+
+  ai-service:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: unless-stopped
+    volumes:
+      - ai_app:/app
+      - ai_models:/models
+    environment:
+      - APP_ENV=development
+      - MODEL_PATH=/models
+    ports:
+      - "8000:8000"
+    networks:
+      - web
+
+  ai-ollama:
+    image: ollama/ollama:latest
+    container_name: ai-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - web
+
+  ai-webui:
+    image: ghcr.io/ollama-webui/ollama-webui:latest
+    container_name: ai-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - ollama_webui_data:/app/backend/data
+    networks:
+      - web
+    environment:
+      - OLLAMA_API_BASE_URL=http://ai-ollama:11434/api
+      - WEBUI_SECRET_KEY=replace-with-a-secret
+
+  ghost:
+    image: ghost:5-alpine
+    container_name: ghost
+    restart: unless-stopped
+    environment:
+      url: "https://ghost.100.67.3.125.sslip.io/"
+      database__client: sqlite3
+      database__connection__filename: /var/lib/ghost/content/data/ghost.db
+    volumes:
+      - ghost_content:/var/lib/ghost/content
+    networks:
+      - web
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: unless-stopped
+    env_file:
+      - .env.hybrid
+    environment:
+      POSTGRES_USER: ${DB_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DB_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_POSTGRES_DATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - web
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    env_file:
+      - .env.hybrid
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${DB_POSTGRES_DATABASE}
+      - DB_POSTGRESDB_USER=${DB_POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${DB_POSTGRES_PASSWORD}
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=5678
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GHOST_CONTENT_API_URL=${GHOST_CONTENT_API_URL}
+      - GHOST_ADMIN_API_URL=${GHOST_ADMIN_API_URL}
+      - GHOST_CONTENT_API_KEY=${GHOST_CONTENT_API_KEY}
+      - GHOST_ADMIN_API_KEY=${GHOST_ADMIN_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - web
+
+volumes:
+  npm_data:
+  npm_letsencrypt:
+  ai_app:
+  ai_models:
+  ollama_models:
+  ollama_webui_data:
+  ghost_content:
+  postgres_data:
+  n8n_data:
+
+networks:
+  web:
+    driver: bridge
+

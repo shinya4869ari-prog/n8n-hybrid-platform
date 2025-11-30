@@ -1,0 +1,75 @@
+# Sensitive files - never commit
+.env.hybrid
+.env*.local
+
+# Docker volumes data (managed externally)
+*_data/
+volumes/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+*_backup
+
+# AI models cache (large)
+ai/models/
+models/
+
+# Node modules if present
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+
+# Docker build cache (optional)
+.docker/
+
+# SSL certificates (if stored locally - should be in NPM volume)
+*.pem
+*.crt
+*.key
+!*.example.key
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Ghost content (in volume)
+ghost/content/data/
+ghost/content/logs/
+
+# n8n data (in volume)
+.n8n/
+
+# Postgres data
+postgres_data/
+.env
