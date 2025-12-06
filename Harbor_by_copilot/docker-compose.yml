@@ -1,0 +1,95 @@
+version: "3.9"
+
+services:
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    # 🌟 外部DBへの依存を排除し、SQLite（ファイルDB）を使用 🌟
+    volumes:
+      - npm_data:/data # SQLiteファイルがここに永続化されます
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - harbor_by_copirot_web
+      - n8n-hybrid_web
+    # 🌟 ポート競合を回避し、Tailscaleアクセスも許可 🌟
+    ports:
+      - "80:80"      # 標準HTTPポート公開 (8080→80 へ移行)
+      - "443:443"    # 標準HTTPSポート公開 (8443→443 へ移行)
+      - "0.0.0.0:81:81"  # 管理画面を全てのIP（Tailscale IP含む）で公開
+      - "0.0.0.0:82:82"  # Ghost専用ポート
+
+  ai-service:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: unless-stopped
+    volumes:
+      - ai_app:/app
+      - ai_models:/models
+    environment:
+      - APP_ENV=development
+      - MODEL_PATH=/models
+    # 🌟 ポートを公開し、ホストPCから直接アクセス可能に 🌟
+    ports:
+      - "8000:8000"
+    networks:
+      - web
+
+  # ↓↓↓↓↓ ai-gui を削除して ollama + webui に置き換え ↓↓↓↓↓
+  ai-ollama:
+    image: ollama/ollama:latest
+    container_name: ai-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - web
+
+  ai-webui:
+    image: ghcr.io/ollama-webui/ollama-webui:latest
+    container_name: ai-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - ollama_webui_data:/app/backend/data
+    networks:
+      - web
+    environment:
+      - OLLAMA_API_BASE_URL=http://ai-ollama:11434/api
+      - WEBUI_SECRET_KEY=replace-with-a-secret
+  # ↓↓↓ Ghost (SQLite) を追加 ↓↓↓
+  ghost:
+    image: ghost:5-alpine
+    container_name: ghost
+    restart: unless-stopped
+    environment:
+      # ブラウザでアクセスする URL を実際に公開するドメインに合わせる（http/https を正しく指定）
+      url: "http://ghost.local/"
+      database__client: sqlite3
+      database__connection__filename: /var/lib/ghost/content/data/ghost.db
+    volumes:
+      - ghost_content:/var/lib/ghost/content
+    networks:
+      - web
+    # ポート公開は不要。NPMでforward先に 'ghost:2368' を指定する。
+  # ↑↑↑ Ghost (SQLite) 追加ここまで ↑↑↑
+  
+volumes:
+  npm_data:
+  npm_letsencrypt:
+  ai_app:
+  ai_models:
+  ollama_models:
+  ollama_webui_data:
+  ghost_content:
+  
+networks:
+  harbor_by_copirot_web:
+    external: true
+  n8n-hybrid_web:
+    external: true
+  web:
+    driver: bridge

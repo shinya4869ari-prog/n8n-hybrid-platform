@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  nginx-proxy-manager:
+    # 🌟 ports ブロックは全て削除（ポート設定は docker-compose.yml に一元化）
+    environment:
+      - NODE_ENV=development
+
+  # 🌟 Ghostコンテナを一時的に削除したため、このサービスも削除（またはコメントアウト）すべきですが、
+  # 開発ボリュームの設定だけは維持します。（再追加時に楽なため）
+  # ただし、今はGhostコンテナがないため、安全のためにコメントアウトを推奨します。
+  # ghost:
+  #   volumes:
+  #     - ./ghost/content:/var/lib/ghost/content:delegated
+  #   environment:
+  #     - url=http://ghost.local
+
+  ai-service:
+    # 🌟 ホットリロードのためのバインドマウント（開発の要）を維持
+    volumes:
+      - ./ai:/app:delegated
+    environment:
+      - APP_ENV=development

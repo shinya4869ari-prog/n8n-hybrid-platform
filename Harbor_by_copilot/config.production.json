@@ -1,0 +1,16 @@
+{
+  "url": "http://ghost.local:8080/",
+  "server": {
+    "port": 2368,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "client": "sqlite3",
+    "connection": {
+      "filename": "/var/lib/ghost/content/data/ghost.db"
+    }
+  },
+  "paths": {
+    "contentPath": "/var/lib/ghost/content"
+  }
+}
